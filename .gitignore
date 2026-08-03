@@ -6,3 +6,8 @@ coverage/
 !.env.example
 .DS_Store
 *.log
+*.tgz
+*.sqlite
+*.sqlite-*
+.pi-delivery/
+.pi-subagents/

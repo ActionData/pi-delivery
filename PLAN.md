@@ -1,12 +1,21 @@
 # pi-delivery plan
 
-**Status:** Working plan
+**Status:** Phase 0 implementation
 
 **License:** MIT
 
 **Initial delivery target:** GitHub pull requests
 
 **Issue sources:** GitHub Issues, Linear, and Jira Cloud
+
+## Resolved scaffold decisions
+
+- npm package name: `@actiondata/pi-delivery` (publication rights still require verification);
+- minimum Node.js version: `22.19.0`;
+- package manager: npm `10.9.7` with a committed lockfile;
+- implementation language: strict TypeScript `5.9.3`, NodeNext ESM;
+- test runner: credential-free `node:test`;
+- initial compatibility target: Pi `0.83.0` with `pi-subagents` `0.40.0`, pending a dedicated compatibility probe.
 
 ## Vision
 
@@ -31,7 +40,7 @@ The initial workflow never merges or deploys.
 
 ## Core decisions
 
-1. Build a standalone Pi package, provisionally published as `@actiondata/pi-delivery`.
+1. Build a standalone Pi package named `@actiondata/pi-delivery`; publishing remains gated on npm ownership and release review.
 2. Use `pi-subagents` through its supported tool and stable v1 RPC/event surface rather than importing private internals.
 3. Separate the issue source from the code-delivery target:
    - `IssueTracker`: GitHub Issues, Linear, or Jira;
@@ -45,14 +54,15 @@ The initial workflow never merges or deploys.
 6. Use SQLite and an append-only event journal for a single trusted runner host in 1.0.
 7. Treat tracker statuses, labels, and comments as human-facing projections, not atomic locks.
 8. Bind validation and review evidence to immutable base and head commit identifiers.
-9. Require fresh-context independent reviews and invalidate them after every new commit.
-10. Require human review and merge.
+9. Require fresh-context independent agent reviews and invalidate them after every new commit.
+10. Require a human merge decision; additional third-party human approval is configurable and repository policy remains authoritative.
+11. Support an existing authenticated GitHub user as the baseline mutation actor; GitHub Apps and dedicated bot identities remain optional hardening choices, not installation requirements.
 
 ## Reference implementation
 
 [ActionData/shipyard#2](https://github.com/ActionData/shipyard/pull/2) is the initial project-specific reference. It demonstrates useful patterns that should be preserved:
 
-- a dedicated least-privilege runner identity;
+- an explicitly bound mutation identity, with a dedicated least-privilege identity as optional hardening;
 - environment and tool allowlists;
 - single-writer worktrees;
 - exact-SHA PR lifecycle transitions;
@@ -301,7 +311,8 @@ Configuration uses provider-native candidate queries. The package should not att
 
 ### GitHub Issues
 
-- Prefer a GitHub App installation token; permit a dedicated fine-grained bot token for controlled local use.
+- Support the existing authenticated `gh` user as the first-alpha baseline; also permit a GitHub App installation token or dedicated fine-grained token when available.
+- Bind every run to the observed GitHub login, configured repository, and verified repository permissions before mutation.
 - Exclude pull requests returned by issue-list APIs.
 - Prefer additive label operations over replace-all updates.
 - Link PRs with an idempotently marked comment and optional native issue relationship.
@@ -345,6 +356,8 @@ Rules:
 - no default-branch push;
 - no amend, squash, rebase, or force-push after PR publication;
 - no merge or deployment operation;
+- in authenticated-user mode, use controller-invoked GitHub HTTPS transport backed by the configured `gh` credential; reject SSH, non-GitHub push targets, and ambient credential-helper selection in the first alpha;
+- verify the expected `gh` host/login before each push intent and post-verify the exact remote branch SHA;
 - reject `.git`, `.env*`, `node_modules`, path escape, and symlink escape;
 - never reset or delete an ambiguous dirty worktree automatically;
 - reconcile an existing branch or PR before creating another;
@@ -354,16 +367,19 @@ Open a draft PR after the first coherent implementation pass. Every new commit i
 
 ## Credential and execution boundary
 
-The runner holds provider credentials; agents do not.
+The deterministic runner owns provider operations. Agents are not intentionally passed tracker or GitHub credentials.
 
-- Use a dedicated identity without merge, administration, branch-protection bypass, Actions-secret, or deployment permissions.
-- Mint short-lived credentials where provider support makes that practical.
+- Permit the maintainer's existing authenticated `gh` identity; do not require a separately provisioned bot or GitHub App.
+- Discover and record the authenticated login, verify it against configuration, and bind it to an exact repository allowlist before mutation.
+- Prefer narrower or short-lived credentials when they are available, but do not make organization-level app/bot administration a prerequisite.
+- Do not implement or expose runner operations for merge, administration, branch-protection bypass, Actions secrets, or deployment, even when the authenticated credential itself possesses those permissions.
 - Start Pi and child processes from an environment allowlist.
 - Disable ambient credential helpers, Git hooks, unapproved extensions, and unapproved skills in unattended mode.
 - Treat issue text, comments, repository content, diffs, docs, tests, and tool output as untrusted prompt data.
 - Do not execute repository code inside the credential-bearing orchestration process.
 - Run project code in credential-free CI or an explicitly configured sandboxed/local validation process.
-- Document that worktrees and Pi tool controls are not an OS sandbox.
+
+An existing `gh` login normally lives in the user's home directory or operating-system credential store. Because version 1.0 does not claim an OS sandbox, a child process running as the same OS user may still be able to reach that credential despite environment filtering. `doctor` must report this residual risk; unattended user-authenticated operation requires explicit human acknowledgement or external process isolation. The package must not describe worktrees, tool allowlists, or sanitized environment variables as credential isolation.
 
 ## Validation
 
@@ -378,7 +394,7 @@ Optional local validation is administrator-configured as argv arrays, never mode
 }
 ```
 
-Local validation runs from an environment allowlist without tracker, GitHub, cloud, deployment, or model-provider credentials. Issue content cannot add or modify validation commands.
+Local validation is not intentionally supplied tracker, GitHub, cloud, deployment, or model-provider credentials and runs from an environment allowlist. Without external process isolation, same-OS-user ambient credential reachability remains the documented residual risk above. Issue content cannot add or modify validation commands.
 
 ## Review evidence and remediation
 
@@ -427,6 +443,19 @@ Finalization:
 
 The runner never merges the PR.
 
+### GitHub actor and human handoff policy
+
+GitHub authentication and human approval are separate concerns:
+
+- On a maintainer-owned repository, the configured policy may require no additional third-party human approval. The authenticated maintainer makes the final merge decision after deterministic validation and independent agent review.
+- On a repository governed by another organization, the runner requests configured reviewers and obeys branch protection, rulesets, CODEOWNERS, and other repository requirements. It never attempts to bypass them.
+- Every PR requires a human merge decision outside the runner.
+- External-approval policy is a separate dimension: it may require no additional approval, require an approval from a human distinct from both the authenticated mutation actor and PR author, or defer to stricter repository-native policy.
+- Neither the authenticated mutation actor nor the PR author can satisfy a configured actor-distinct approval requirement, including when reconciling a pre-existing PR whose author differs from the current actor.
+- The decision packet records the authenticated actor, PR author, unconditional human-merge boundary, configured external-approval requirement, and observed repository policy.
+
+The authenticated maintainer may possess merge permission, but `pi-delivery` still provides no merge operation. Human merge means the person decides and performs the merge outside the runner.
+
 ## Backlog runner
 
 Commands:
@@ -471,13 +500,13 @@ Configuration sections:
 - GitHub repository and default branch;
 - issue tracker and provider-native candidate query;
 - tracker state/label/transition mappings;
-- credential environment-variable names, never values;
+- GitHub authentication mode, expected actor login, and credential reference where needed, never credential values;
 - source-of-truth documents;
 - branch naming and worktree root;
 - validation mode and required checks;
 - generic role mappings and optional overrides;
 - review triggers and maximum rounds;
-- human reviewers;
+- human handoff policy and optional actor-distinct reviewers;
 - lease, retry, concurrency, and budget limits;
 - forbidden side effects and safety acknowledgements.
 
@@ -491,9 +520,9 @@ Reject unknown keys, literal token-like values, unsafe branch patterns, absent t
 2. infer repository, default branch, package manager, and likely checks;
 3. ask which tracker is authoritative;
 4. ask for the provider-native candidate query and state mappings;
-5. confirm push, draft-PR, local-execution, preview, merge, and deployment authority;
-6. confirm validation and review policy;
-7. request credential environment-variable names, not secret values;
+5. confirm the observed GitHub actor and push, draft-PR, local-execution, and preview authority while recording that runner merge and deployment authority are unconditionally denied;
+6. confirm validation, independent agent review, human merge, and any additional external-approval policy;
+7. select existing `gh` authentication or request credential environment-variable names, never secret values;
 8. generate configuration through a schema-validated deterministic tool;
 9. run `doctor`;
 10. perform a read-only candidate dry run.
@@ -515,6 +544,8 @@ No project-specific agents are generated by default. A later specialization work
 ## Implementation roadmap
 
 ### Phase 0 — Specification and package skeleton
+
+**Progress:** package scaffold and experimental public contracts are being implemented in [issue #1](https://github.com/ActionData/pi-delivery/issues/1).
 
 - Create standalone package structure.
 - Define interfaces and state machine.
@@ -629,7 +660,7 @@ Version 1.0 is ready when:
 - generic agents successfully operate from normal repository context files;
 - stale SHA validation or review evidence cannot approve;
 - exactly one writer is enforced;
-- workers do not receive tracker, merge, deployment, or cloud credentials;
+- workers are not intentionally supplied tracker, GitHub, deployment, or cloud credentials, and ambient same-user reachability is either externally isolated or explicitly acknowledged;
 - human merge remains mandatory;
 - Shipyard consumes the package successfully;
 - at least one real project per tracker completes an issue-to-reviewed-PR run.
@@ -638,9 +669,8 @@ Version 1.0 is ready when:
 
 Resolve before implementation reaches the affected phase:
 
-1. Final npm package scope and publication ownership.
-2. Minimum supported Pi and `pi-subagents` versions.
-3. GitHub App-first authentication versus dedicated fine-grained token in the first alpha.
-4. Whether SQLite lives exclusively under the Git common directory or supports a configured user-state location.
-5. The first dedicated test repositories/workspaces/projects for GitHub, Linear, and Jira.
-6. Whether a future multi-host state store should target PostgreSQL or another transactional service.
+1. Confirm npm `@actiondata` publication ownership and trusted-publishing configuration.
+2. Certify the minimum supported Pi and `pi-subagents` versions; the initial test target is Pi `0.83.0` with `pi-subagents` `0.40.0`.
+3. Whether SQLite lives exclusively under the Git common directory or supports a configured user-state location.
+4. The first dedicated test repositories/workspaces/projects for GitHub, Linear, and Jira.
+5. Whether a future multi-host state store should target PostgreSQL or another transactional service.

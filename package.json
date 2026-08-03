@@ -1,0 +1,71 @@
+{
+  "name": "@actiondata/pi-delivery",
+  "version": "0.0.0",
+  "description": "Generic-first durable issue-to-pull-request delivery for Pi",
+  "type": "module",
+  "license": "MIT",
+  "author": "Action Data Systems",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ActionData/pi-delivery.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ActionData/pi-delivery/issues"
+  },
+  "homepage": "https://github.com/ActionData/pi-delivery#readme",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "delivery",
+    "github",
+    "linear",
+    "jira",
+    "agents"
+  ],
+  "private": true,
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "packageManager": "npm@10.9.7",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./schema/config.schema.json": "./schema/config.schema.json"
+  },
+  "files": [
+    "dist/",
+    "schema/config.schema.json",
+    "docs/COMPATIBILITY.md",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test tests/*.test.mjs",
+    "pack:check": "npm run build && node scripts/verify-pack.mjs",
+    "check": "npm run typecheck && npm test && npm run pack:check",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3"
+  }
+}
