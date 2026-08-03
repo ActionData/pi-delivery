@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ActionData/pi-delivery/main/schema/config.schema.json",
+  "title": "pi-delivery pre-alpha configuration",
+  "description": "Experimental, incomplete, non-operational configuration contract for pi-delivery.",
+  "$comment": "No runner accepts this schema yet. It will be versioned before operational use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "tracker", "forge"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "defaultBranch"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "defaultBranch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "candidateQuery"],
+      "properties": {
+        "kind": {
+          "enum": ["github", "linear", "jira"]
+        },
+        "candidateQuery": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object"
+            }
+          ]
+        }
+      }
+    },
+    "forge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "const": "github"
+        }
+      }
+    }
+  }
+}
