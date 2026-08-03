@@ -49,6 +49,12 @@ test("public exports resolve only to built artifacts and the public schema", asy
   ]);
 
   assert.equal(root.reduceJobState, core.reduceJobState);
+  assert.equal(root.parseJobEvent, core.parseJobEvent);
+  assert.equal(root.parseJobSnapshot, core.parseJobSnapshot);
+  assert.equal(root.reduceJobEvent, core.reduceJobEvent);
+  assert.equal(root.replayJobEvents, core.replayJobEvents);
+  assert.equal(root.JOB_EVENT_VERSION, 1);
+  assert.equal(root.JOB_SNAPSHOT_VERSION, 1);
   assert.equal(root.CONFIG_SCHEMA_VERSION, config.CONFIG_SCHEMA_VERSION);
   assert.equal(schema.default.properties.schemaVersion.const, 1);
 });
