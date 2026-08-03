@@ -19,6 +19,11 @@ export const JOB_STATES = Object.freeze([
 
 export type JobState = (typeof JOB_STATES)[number];
 
+/**
+ * Low-level adjacency input. This primitive does not validate durable event
+ * identity, revisions, attempts, reasons, delivery evidence, or merge proof.
+ * Use reduceJobEvent/replayJobEvents for the authoritative job aggregate.
+ */
 export interface JobTransitionEvent {
   readonly type: "job.transition";
   readonly from: JobState | null;
@@ -33,11 +38,24 @@ const transitionTable = {
   implementing: ["draft-pr", "blocked", "failed", "cancelled"],
   "draft-pr": ["validating", "blocked", "failed", "cancelled"],
   validating: ["reviewing", "changes-requested", "blocked", "failed", "cancelled"],
-  reviewing: ["changes-requested", "finalizing", "blocked", "failed", "cancelled"],
+  reviewing: [
+    "validating",
+    "changes-requested",
+    "finalizing",
+    "blocked",
+    "failed",
+    "cancelled",
+  ],
   "changes-requested": ["fixing", "blocked", "failed", "cancelled"],
   fixing: ["validating", "blocked", "failed", "cancelled"],
-  finalizing: ["review-ready", "blocked", "failed", "cancelled"],
-  "review-ready": ["completed-after-human-merge", "blocked", "failed", "cancelled"],
+  finalizing: ["validating", "review-ready", "blocked", "failed", "cancelled"],
+  "review-ready": [
+    "validating",
+    "completed-after-human-merge",
+    "blocked",
+    "failed",
+    "cancelled",
+  ],
   // Resume is a conservative requeue. Durable reconciliation must inspect any
   // existing branch, PR, and effects before the job can be claimed again.
   blocked: ["queued", "failed", "cancelled"],
@@ -102,6 +120,11 @@ export function canTransition(
   return JOB_TRANSITIONS[from].includes(to);
 }
 
+/**
+ * Validate state adjacency only. In particular, this function can validate
+ * review-ready -> completed-after-human-merge without proving a merge. The
+ * authoritative durable boundary is reduceJobEvent/replayJobEvents.
+ */
 export function reduceJobState(
   current: JobState | null,
   event: JobTransitionEvent,
