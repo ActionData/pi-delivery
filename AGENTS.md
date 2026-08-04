@@ -4,7 +4,7 @@
 
 ## Current scope
 
-This repository is pre-alpha. The current scaffold defines public configuration and lifecycle contracts; it does not yet run agents, trackers, GitHub mutations, SQLite state, a daemon, or a CLI.
+This repository is pre-alpha. It defines public configuration/lifecycle contracts and an experimental SQLite event journal; it does not yet run agents, trackers, GitHub mutations, leases, an outbox, a daemon, or a CLI.
 
 Keep generic modules free of project-specific repository names, labels, users, models, product rules, and infrastructure policy. Project-specific behavior belongs in configuration or profiles.
 
