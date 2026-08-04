@@ -43,12 +43,17 @@
       "types": "./dist/config/index.d.ts",
       "import": "./dist/config/index.js"
     },
+    "./store": {
+      "types": "./dist/store/index.d.ts",
+      "import": "./dist/store/index.js"
+    },
     "./schema/config.schema.json": "./schema/config.schema.json"
   },
   "files": [
     "dist/",
     "schema/config.schema.json",
     "docs/COMPATIBILITY.md",
+    "docs/STATE-STORAGE.md",
     "README.md",
     "SECURITY.md",
     "LICENSE"

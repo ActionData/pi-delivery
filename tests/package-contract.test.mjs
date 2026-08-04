@@ -30,6 +30,7 @@ test("public exports resolve only to built artifacts and the public schema", asy
     ".",
     "./core",
     "./config",
+    "./store",
     "./schema/config.schema.json",
   ]);
 
@@ -39,10 +40,11 @@ test("public exports resolve only to built artifacts and the public schema", asy
     }
   }
 
-  const [root, core, config, schema] = await Promise.all([
+  const [root, core, config, store, schema] = await Promise.all([
     import("@actiondata/pi-delivery"),
     import("@actiondata/pi-delivery/core"),
     import("@actiondata/pi-delivery/config"),
+    import("@actiondata/pi-delivery/store"),
     import("@actiondata/pi-delivery/schema/config.schema.json", {
       with: { type: "json" },
     }),
@@ -55,6 +57,8 @@ test("public exports resolve only to built artifacts and the public schema", asy
   assert.equal(root.replayJobEvents, core.replayJobEvents);
   assert.equal(root.JOB_EVENT_VERSION, 1);
   assert.equal(root.JOB_SNAPSHOT_VERSION, 1);
+  assert.equal(root.openSqliteJobStore, store.openSqliteJobStore);
+  assert.equal(root.JOB_STORE_SCHEMA_VERSION, 1);
   assert.equal(root.CONFIG_SCHEMA_VERSION, config.CONFIG_SCHEMA_VERSION);
   assert.equal(schema.default.properties.schemaVersion.const, 1);
 });
